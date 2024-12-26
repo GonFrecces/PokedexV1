@@ -1,26 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Link } from "@nextui-org/link";
 import { Snippet } from "@nextui-org/snippet";
-import { Code } from "@nextui-org/code";
-import { Card, CardHeader, CardBody, CardFooter, Image } from "@nextui-org/react";
+import { Card, Skeleton, CardBody, CardFooter, Button } from "@nextui-org/react";
 import { button as buttonStyles } from "@nextui-org/theme";
-
-import { siteConfig } from "@/config/site";
-import { title, subtitle } from "@/components/primitives";
-import { GithubIcon } from "@/components/icons";
-
+import { title } from "@/components/primitives";
 import { getData, getCachedData } from "@/app/api/getPk";
-
 import { PokemonCard } from "@/components/cardEffect";
 
 
-export default function Home() {
+const Home = () => {
 
     const [data, setData] = useState([]);
 
     const [cache, setCache] = useState(new Map());
+
+    const [isLoaded, setIsloaded] = useState(false);
 
     const colors = {
         'normal': '#A8A878',
@@ -41,14 +36,26 @@ export default function Home() {
         'dark': '#705848',
         'steel': '#B8B8D0',
         'fairy': '#EE99AC',
-};
+    };
+
+    const generations = [
+        {'generation': 'Kanto', 'amount': 151, 'offset': 0 },
+        {'generation': 'Johto', 'amount': 100, 'offset': 151 },
+        {'generation': 'Hoenn', 'amount': 135, 'offset': 251 },
+        {'generation': 'Sinnoh', 'amount': 107, 'offset': 386 },
+        {'generation': 'Unova', 'amount': 156, 'offset': 493 },
+        {'generation': 'Kalos', 'amount': 72, 'offset': 649 },
+        {'generation': 'Alola', 'amount': 88, 'offset': 721 },
+        {'generation': 'Galar', 'amount': 89, 'offset': 809 },
+        {'generation': 'Paldea', 'amount': 120, 'offset': 905 },
+    ]
 
     useEffect(() => {
         const fetchData = async () => {
 
-            const result = await getData(100, 0);
+            const result = await getData(151, 0, setIsloaded);
 
-            const cachedResult = await getCachedData(100, 0);
+            const cachedResult = await getCachedData(151, 0, setIsloaded);
 
             const { pokemonDetails } = result;
 
@@ -80,84 +87,89 @@ export default function Home() {
     return (
         <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
             <div className="inline-block max-w-xl text-center justify-center">
-                <span className={title()}>Make&nbsp;</span>
-                <span className={title({ color: "violet" })}>beautiful&nbsp;</span>
-                <br />
-                <span className={title()}>
-                    websites regardless of your design experience.
-                </span>
-                <div className={subtitle({ class: "mt-4" })}>
-                    Beautiful, fast and modern React UI library.
-                </div>
-            </div>
 
-            <div className="flex gap-3">
-                <Link
-                    isExternal
-                    className={buttonStyles({
-                        color: "primary",
-                        radius: "full",
-                        variant: "shadow",
-                    })}
-                    href={siteConfig.links.docs}
-                >
-                    Documentation
-                </Link>
-                <Link
-                    isExternal
-                    className={buttonStyles({ variant: "bordered", radius: "full" })}
-                    href={siteConfig.links.github}
-                >
-                    <GithubIcon size={20} />
-                    GitHub
-                </Link>
+                <span className={title({ color: "violet" })}>Pokemon&nbsp;</span>
+
             </div>
 
             <div className="mt-8">
-                <Snippet hideCopyButton hideSymbol variant="bordered">
-                    <span>
-                        Get started by editing <Code color="primary">app/page.tsx</Code>
-                    </span>
-                </Snippet>
+                {
+                    generations.map((generation, index) => (
+                        <Button key={index} className="m-1" onPress={async () => {
+                            
+                            const result = await getData(generation['amount'], generation['offset'], setIsloaded);
+                            const cachedResult = await getCachedData(generation['amount'], generation['offset'], setIsloaded);
+                            const { pokemonDetails } = result;
+                            const data = pokemonDetails.map(pokemon => ({
+                                name: pokemon.name,
+                                image: pokemon.sprites.front_default ? pokemon.sprites.other.home.front_default : pokemon.sprites.front_default,
+                                types: pokemon.types.map(type => type.type.name),
+                                order: pokemon.order,
+                                id: pokemon.id,
+                                abilities: pokemon.abilities,
+                                base_experience: pokemon.base_experience,
+                                game_indices: pokemon.game_indices,
+                                height: pokemon.height,
+                                weight: pokemon.weight,
+                                moves: pokemon.moves,
+                                stats: pokemon.stats,
+                            }));
+
+                            setData(data);
+                            setCache(new Map(cache.set(`${generation['amount']}-${generation['offset']}`, cachedResult)));
+
+
+
+                        }}>
+                            <a className={buttonStyles({ color: "violet" })}>
+                                {generation['generation'].charAt(0).toUpperCase() + generation['generation'].slice(1).toLowerCase()}
+                            </a>
+                        </Button>
+                    ))
+                }
             </div>
-            <div className="grid gap-4 grid-flow-row-dense xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+
+            <div className="grid gap-4  xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+
+
                 {data.map((pokemon, index) => (
 
-                    <Card className="py-4 transition-transform hover:scale-105" key={index}>
-                        <CardHeader className="pb-0 pt-2 px-4">
-                            <div className="w-full flex justify-end items-center">
-                                <div className="flex gap-2">
+                    <Skeleton className="rounded-lg w-full" key={index} isLoaded={isLoaded} width={273} height={273}>
+
+                        <Card className="transition-transform hover:scale-105 dark:bg-default-100" key={index}>
+                            <CardBody className="p-2 cursor-pointer" >
+                                <PokemonCard pokemon={pokemon} />
+                            </CardBody>
+                            <CardFooter className=" pt-2 px-2 flex-col items-start">
+                                <h5 className=" text-default-600 font-bold">{pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1).toLowerCase()}</h5>
+                                <div className="flex gap-1 pt-1">
                                     {pokemon.types.map((type, index) => (
-                                        <Snippet 
-                                            key={`type-${index}`} 
-                                            hideCopyButton 
-                                            hideSymbol 
-                                            variant="solid" 
-                                            style={{backgroundColor: colors[type]}}
+                                        <Snippet
+                                            key={`type-${index}`}
+                                            hideCopyButton
+                                            hideSymbol
+                                            variant="solid"
+                                            style={{ backgroundColor: colors[type] }}
                                         >
                                             <small className="text-white">{type}</small>
                                         </Snippet>
                                     ))}
+
                                 </div>
-                            </div>
-                        </CardHeader>
-                        <CardBody className="overflow-visible py-2" style={{cursor: 'pointer'}}>
-                            <PokemonCard pokemon={pokemon}/>
-                        </CardBody>
-                        <CardFooter className="gap-3">
-                            <div className="flex gap-1">
-                                <h5 className=" text-default-600 font-bold">{pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1).toLowerCase()}</h5>
-                            </div>
-                            <div className="w-full flex justify-end items-center">
-                                <Snippet hideCopyButton symbol="#" variant="bordered">
-                                    <span className="text-tiny font-bold">{pokemon.order}</span>
-                                </Snippet>
-                            </div>
-                        </CardFooter>
-                    </Card>
+
+
+                            </CardFooter>
+                        </Card>
+
+                    </Skeleton>
+
                 ))}
 
+
             </div>
+
         </section>
     );
 }
+
+export default Home;

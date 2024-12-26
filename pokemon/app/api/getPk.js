@@ -9,7 +9,8 @@ const BATCH_SIZE = 50; // Número de solicitudes simultáneas
  * @param {number} offset - Punto de inicio para la paginación
  * @returns {Promise<{data: any, pokemonDetails: any[]}>}
  */
-const getData = async (limit = 100, offset = 0) => {
+const getData = async (limit = 150, offset = 0, setIsloaded) => {
+    
     try {
         // 1. Obtener la lista inicial de Pokémon
         const response = await axios.get(`${BASE_URL}/pokemon/`, {
@@ -47,11 +48,14 @@ const getData = async (limit = 100, offset = 0) => {
             pokemonDetails.push(...successfulResults);
         }
 
+        setIsloaded(true);
+
         return {
             data: response.data,
             pokemonDetails
         };
     } catch (error) {
+        setIsloaded(false);
         console.error('Error en getData:', error.message);
         throw new Error('Error al obtener datos de Pokémon');
     }
@@ -65,14 +69,14 @@ const cache = new Map();
 /**
  * Versión con caché de getData
  */
-const getCachedData = async (limit = 100, offset = 0) => {
+const getCachedData = async (limit = 100, offset = 0, setIsloaded) => {
     const cacheKey = `${limit}-${offset}`;
     
     if (cache.has(cacheKey)) {
         return cache.get(cacheKey);
     }
 
-    const result = await getData(limit, offset);
+    const result = await getData(limit, offset, setIsloaded);
     cache.set(cacheKey, result);
     return result;
 };
